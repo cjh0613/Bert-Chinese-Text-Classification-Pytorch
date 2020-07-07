@@ -133,3 +133,5 @@ checkpoint
 
 # secrets
 .idea/
+HITSZQA/
+bert_pretrain/
