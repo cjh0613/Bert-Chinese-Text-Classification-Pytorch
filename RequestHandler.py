@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from importlib import import_module
 from sklearn.preprocessing import LabelEncoder
+from os import path
 
 
 le = LabelEncoder()
@@ -12,7 +13,8 @@ PAD, CLS = '[PAD]', '[CLS]'  # padding符号, bert中综合信息符号
 class RequestHandler:
 
     def __init__(self, model_name):
-        self.dataset = 'HITSZQA'
+        cur_path = path.dirname(__file__)
+        self.dataset = path.join(cur_path, 'HITSZQA')
         x = import_module('models.' + model_name)
         config = x.Config(self.dataset)
         config.batch_size = 1
@@ -47,8 +49,9 @@ class RequestHandler:
         mask = torch.LongTensor([mask]).to(self.device)
         text = (token_ids, seq_len, mask)
         output = self.model(text)
-        label_ids = torch.max(output.data, 1)[1].cpu().numpy()
-        return inverse_label(label_ids[0])[9:]
+        confidence = torch.nn.functional.softmax(output.data)
+        label_ids = torch.max(confidence, 1)[1].cpu().numpy()
+        return inverse_label(label_ids[0])[9:], confidence[0][label_ids[0]].item()
 
 
 if __name__ == '__main__':
