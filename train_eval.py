@@ -5,8 +5,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from sklearn import metrics
 import time
+import pandas as pd
 from utils import get_time_dif
 from pytorch_pretrained.optimization import BertAdam
+import matplotlib.pyplot as plt
 
 
 # 权重初始化，默认xavier
@@ -54,7 +56,7 @@ def train(config, model, train_iter, dev_iter, test_iter):
             loss = F.cross_entropy(outputs, labels)
             loss.backward()
             optimizer.step()
-            if total_batch % 100 == 0:
+            if total_batch % 10 == 0:
                 # 每多少轮输出在训练集和验证集上的效果
                 true = labels.data.cpu()
                 predic = torch.max(outputs.data, 1)[1].cpu()
@@ -92,8 +94,12 @@ def test(config, model, test_iter):
     print(msg.format(test_loss, test_acc))
     print("Precision, Recall and F1-Score...")
     print(test_report)
+    report = pd.DataFrame(test_report).transpose()
+    report.to_csv('report.csv')
     print("Confusion Matrix...")
     print(test_confusion)
+    confusion = pd.DataFrame(test_confusion).transpose()
+    confusion.to_csv('confusion.csv')
     time_dif = get_time_dif(start_time)
     print("Time usage:", time_dif)
 
@@ -115,7 +121,7 @@ def evaluate(config, model, data_iter, test=False):
 
     acc = metrics.accuracy_score(labels_all, predict_all)
     if test:
-        report = metrics.classification_report(labels_all, predict_all, target_names=config.class_list, digits=4)
+        report = metrics.classification_report(labels_all, predict_all, target_names=config.class_list, digits=4, output_dict=True)
         confusion = metrics.confusion_matrix(labels_all, predict_all)
         return acc, loss_total / len(data_iter), report, confusion
     return acc, loss_total / len(data_iter)
