@@ -22,7 +22,7 @@ class RequestHandler:
         self.tokenizer = config.tokenizer
         self.pad_size = config.pad_size
         self.model = x.Model(config).to(self.device)
-        self.model.load_state_dict(torch.load(config.save_path))
+        self.model.load_state_dict(torch.load(config.save_path, map_location=self.device.type))
         self.model.eval()
         dataset = pd.read_csv(config.train_path, encoding='utf-8', names=['comments', 'label'], sep='\t', header=None)
         label = np.array(dataset['label'])
@@ -49,7 +49,7 @@ class RequestHandler:
         mask = torch.LongTensor([mask]).to(self.device)
         text = (token_ids, seq_len, mask)
         output = self.model(text)
-        confidence = torch.nn.functional.softmax(output.data)
+        confidence = torch.nn.functional.softmax(output.data, dim=1)
         label_ids = torch.max(confidence, 1)[1].cpu().numpy()
         return inverse_label(label_ids[0])[9:], confidence[0][label_ids[0]].item()
 
