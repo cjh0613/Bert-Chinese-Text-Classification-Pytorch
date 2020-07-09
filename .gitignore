@@ -133,5 +133,9 @@ checkpoint
 
 # secrets
 .idea/
-HITSZQA/
 bert_pretrain/
+/HITSZQA/data/train.txt
+/HITSZQA/data/class.txt
+/HITSZQA/saved_dict/bert.ckpt
+/confusion.csv
+/report.csv
