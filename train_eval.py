@@ -8,7 +8,6 @@ import time
 import pandas as pd
 from utils import get_time_dif
 from pytorch_pretrained.optimization import BertAdam
-import matplotlib.pyplot as plt
 
 
 # 权重初始化，默认xavier
@@ -81,7 +80,8 @@ def train(config, model, train_iter, dev_iter, test_iter):
                 break
         if flag:
             break
-    test(config, model, test_iter)
+    if test_iter:
+        test(config, model, test_iter)
 
 
 def test(config, model, test_iter):

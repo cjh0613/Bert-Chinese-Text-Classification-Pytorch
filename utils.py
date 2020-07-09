@@ -12,7 +12,7 @@ le = LabelEncoder()
 PAD, CLS = '[PAD]', '[CLS]'  # padding符号, bert中综合信息符号
 
 
-def build_dataset(config):
+def build_dataset(config, need_test):
     def load_dataset(path, pad_size=32):
         dataset = pd.read_csv(path, encoding='utf-8', names=['comments', 'label'], sep='\t', header=None)
         dataset['token'] = dataset['comments'].map(lambda x: config.tokenizer.tokenize(x))
@@ -29,25 +29,28 @@ def build_dataset(config):
                                                  if x['seq_len'] < pad_size
                                                  else x['token_ids'][:pad_size], axis=1)
             dataset['seq_len'] = dataset.apply(lambda x: min(x.seq_len, pad_size), axis=1)
-        Y = np.array(dataset['label'])
-        Y = le.fit_transform(Y)
-        Y = Y.reshape(-1, 1)
+        label = np.array(dataset['label'])
+        label = le.fit_transform(label)
+        label = label.reshape(-1, 1)
         dataset.pop('token')
         dataset.pop('label')
         dataset.pop('comments')
-        X = np.array(dataset)
-        x_train, x_dev, y_train, y_dev = train_test_split(X, Y, test_size=0.75, stratify=Y)
-        # x_test, x_dev, y_test, y_dev = train_test_split(x_dev, y_dev, test_size=0.5, stratify=y_dev)
-        train = np.insert(x_train, 1, values=y_train.reshape(1, -1), axis=1)
-        dev = np.insert(x_dev, 1, values=y_dev.reshape(1, -1), axis=1)
-        # test = np.insert(x_test, 1, values=y_test.reshape(1, -1), axis=1)
-        # return list(map(tuple, train)), list(map(tuple, dev)), list(map(tuple, test))
-        return list(map(tuple, train)), list(map(tuple, dev))
+        feature_set = np.array(dataset)
+        train_size = 0.6 if need_test else 0.75
+        x_train, x_dev, y_train, y_dev = train_test_split(feature_set, label, test_size=train_size, stratify=label)
+        if need_test:
+            x_test, x_dev, y_test, y_dev = train_test_split(x_dev, y_dev, test_size=0.5, stratify=y_dev)
+            raw_test = list(map(tuple, np.insert(x_test, 1, values=y_test.reshape(1, -1), axis=1)))
+        else:
+            raw_test = None
+        raw_train = list(map(tuple, np.insert(x_train, 1, values=y_train.reshape(1, -1), axis=1)))
+        raw_dev = list(map(tuple, np.insert(x_dev, 1, values=y_dev.reshape(1, -1), axis=1)))
 
-    # train, dev, test = load_dataset(config.train_path, config.pad_size)
-    train, dev = load_dataset(config.train_path, config.pad_size)
-    # return train, dev, test
-    return train, dev
+        return raw_train, raw_dev, raw_test
+        # return list(map(tuple, train)), list(map(tuple, dev))
+
+    train, dev, test = load_dataset(config.train_path, config.pad_size)
+    return train, dev, test
 
 class DatasetIterater(object):
     def __init__(self, batches, batch_size, device):
@@ -96,7 +99,10 @@ class DatasetIterater(object):
 
 
 def build_iterator(dataset, config):
-    iter = DatasetIterater(dataset, config.batch_size, config.device)
+    if dataset is None:
+        iter = None
+    else:
+        iter = DatasetIterater(dataset, config.batch_size, config.device)
     return iter
 
 

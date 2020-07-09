@@ -5,10 +5,11 @@ import numpy as np
 from train_eval import train, init_network
 from importlib import import_module
 import argparse
-from utils_new import build_dataset, build_iterator, get_time_dif
+from utils import build_dataset, build_iterator, get_time_dif
 
 parser = argparse.ArgumentParser(description='Chinese Text Classification')
 parser.add_argument('--model', type=str, required=True, help='choose a model: Bert, ERNIE')
+parser.add_argument('--need_test', type=str, required=True, help='need test set or not: Yes, No')
 args = parser.parse_args()
 
 
@@ -16,6 +17,10 @@ if __name__ == '__main__':
     dataset = 'HITSZQA'  # 数据集
 
     model_name = args.model  # bert
+    if args.need_test == 'Yes':
+        need_test = True
+    else:
+        need_test = False
     x = import_module('models.' + model_name)
     config = x.Config(dataset)
     np.random.seed(1)
@@ -25,7 +30,7 @@ if __name__ == '__main__':
 
     start_time = time.time()
     print("Loading data...")
-    train_data, dev_data, test_data = build_dataset(config)
+    train_data, dev_data, test_data = build_dataset(config, need_test)
     train_iter = build_iterator(train_data, config)
     dev_iter = build_iterator(dev_data, config)
     test_iter = build_iterator(test_data, config)
