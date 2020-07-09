@@ -17,7 +17,7 @@ tensorboardX
 
 
 ## 中文数据集
-我从[THUCNews](http://thuctc.thunlp.org/)中抽取了20万条新闻标题，已上传至github，文本长度在20到30之间。一共10个类别，每类2万条。数据以字为单位输入模型。
+我从 [THUCNews](http://thuctc.thunlp.org/) 中抽取了20万条新闻标题，已上传至github，文本长度在20到30之间。一共10个类别，每类2万条。数据以字为单位输入模型。
 
 类别：财经、房产、股票、教育、科技、社会、时政、体育、游戏、娱乐。
 
@@ -47,9 +47,10 @@ bert_DPCNN|94.47%|bert + DPCNN
 
 原始的bert效果就很好了，把bert当作embedding层送入其它模型，效果反而降了，之后会尝试长文本的效果对比。
 
-CNN、RNN、DPCNN、RCNN、RNN+Attention、FastText等模型效果，请见我另外一个[仓库](https://github.com/649453932/Chinese-Text-Classification-Pytorch)。  
+CNN、RNN、DPCNN、RCNN、RNN+Attention、FastText等模型效果，请见我另外一个[仓库](https://github.com/649453932/Chinese-Text-Classification-Pytorch) 。  
 
 ## 预训练语言模型
+
 bert模型放在 bert_pretain目录下，ERNIE模型放在ERNIE_pretrain目录下，每个目录下都是三个文件：
  - pytorch_model.bin  
  - bert_config.json  
