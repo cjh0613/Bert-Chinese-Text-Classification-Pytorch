@@ -1,43 +1,53 @@
 # coding: UTF-8
 import torch
-from tqdm import tqdm
 import time
 from datetime import timedelta
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
 
+
+le = LabelEncoder()
 PAD, CLS = '[PAD]', '[CLS]'  # padding符号, bert中综合信息符号
 
 
 def build_dataset(config):
-
     def load_dataset(path, pad_size=32):
-        contents = []
-        with open(path, 'r', encoding='UTF-8') as f:
-            for line in tqdm(f):
-                lin = line.strip()
-                if not lin:
-                    continue
-                content, label = lin.split('\t')
-                token = config.tokenizer.tokenize(content)
-                token = [CLS] + token
-                seq_len = len(token)
-                mask = []
-                token_ids = config.tokenizer.convert_tokens_to_ids(token)
+        dataset = pd.read_csv(path, encoding='utf-8', names=['comments', 'label'], sep='\t', header=None)
+        dataset['token'] = dataset['comments'].map(lambda x: config.tokenizer.tokenize(x))
+        dataset['token'] = dataset['token'].map(lambda x: [CLS] + x)
+        dataset['token_ids'] = dataset['token'].map(lambda x: config.tokenizer.convert_tokens_to_ids(x))
+        dataset['seq_len'] = dataset['token'].map(lambda x: len(x))
+        if pad_size:
+            dataset['mask'] = dataset.apply(lambda x:
+                                            [1] * len(x['token_ids']) + [0] * (pad_size - x['seq_len'])
+                                            if x['seq_len'] < pad_size
+                                            else [1] * pad_size, axis=1)
+            dataset['token_ids'] = dataset.apply(lambda x:
+                                                 x.token_ids + ([0] * (pad_size - x.seq_len))
+                                                 if x['seq_len'] < pad_size
+                                                 else x['token_ids'][:pad_size], axis=1)
+            dataset['seq_len'] = dataset.apply(lambda x: min(x.seq_len, pad_size), axis=1)
+        Y = np.array(dataset['label'])
+        Y = le.fit_transform(Y)
+        Y = Y.reshape(-1, 1)
+        dataset.pop('token')
+        dataset.pop('label')
+        dataset.pop('comments')
+        X = np.array(dataset)
+        x_train, x_dev, y_train, y_dev = train_test_split(X, Y, test_size=0.75, stratify=Y)
+        # x_test, x_dev, y_test, y_dev = train_test_split(x_dev, y_dev, test_size=0.5, stratify=y_dev)
+        train = np.insert(x_train, 1, values=y_train.reshape(1, -1), axis=1)
+        dev = np.insert(x_dev, 1, values=y_dev.reshape(1, -1), axis=1)
+        # test = np.insert(x_test, 1, values=y_test.reshape(1, -1), axis=1)
+        # return list(map(tuple, train)), list(map(tuple, dev)), list(map(tuple, test))
+        return list(map(tuple, train)), list(map(tuple, dev))
 
-                if pad_size:
-                    if len(token) < pad_size:
-                        mask = [1] * len(token_ids) + [0] * (pad_size - len(token))
-                        token_ids += ([0] * (pad_size - len(token)))
-                    else:
-                        mask = [1] * pad_size
-                        token_ids = token_ids[:pad_size]
-                        seq_len = pad_size
-                contents.append((token_ids, int(label), seq_len, mask))
-        return contents
-    train = load_dataset(config.train_path, config.pad_size)
-    dev = load_dataset(config.dev_path, config.pad_size)
-    test = load_dataset(config.test_path, config.pad_size)
-    return train, dev, test
-
+    # train, dev, test = load_dataset(config.train_path, config.pad_size)
+    train, dev = load_dataset(config.train_path, config.pad_size)
+    # return train, dev, test
+    return train, dev
 
 class DatasetIterater(object):
     def __init__(self, batches, batch_size, device):
