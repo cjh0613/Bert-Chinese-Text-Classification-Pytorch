@@ -26,28 +26,34 @@ class RequestHandler:
         self.model.eval()
         dataset = pd.read_csv(config.train_path, encoding='utf-8', names=['comments', 'label'], sep='\t', header=None)
         label = np.array(dataset['label'])
-        le.fit_transform(label)
+        le.fit_transform(label)  # 记录label和int的映射关系
 
     def get_result(self, sentence):
         def inverse_label(predict):
+            # 将预测结果的数字映射回label
             label = le.inverse_transform([predict])
             return list(label)[0]
 
-        token = [CLS] + self.tokenizer.tokenize(sentence)
-        token_ids = self.tokenizer.convert_tokens_to_ids(token)
-        seq_len = len(token)
-        if seq_len < self.pad_size:
-            mask = [1] * len(token_ids) + [0] * (self.pad_size - seq_len)
-            token_ids += ([0] * (self.pad_size - seq_len))
-        else:
-            mask = [1] * self.pad_size
-            token_ids = token_ids[:self.pad_size]
-            seq_len = self.pad_size
+        def process_sentence(raw_sentence):
+            # 将待预测的句子处理成bert的输入格式
+            token = [CLS] + self.tokenizer.tokenize(raw_sentence)
+            token_ids = self.tokenizer.convert_tokens_to_ids(token)
+            seq_len = len(token)
+            if seq_len < self.pad_size:
+                mask = [1] * len(token_ids) + [0] * (self.pad_size - seq_len)
+                token_ids += ([0] * (self.pad_size - seq_len))
+            else:
+                mask = [1] * self.pad_size
+                token_ids = token_ids[:self.pad_size]
+                seq_len = self.pad_size
 
-        token_ids = torch.LongTensor([token_ids]).to(self.device)
-        seq_len = torch.LongTensor([seq_len]).to(self.device)
-        mask = torch.LongTensor([mask]).to(self.device)
-        text = (token_ids, seq_len, mask)
+            token_ids = torch.LongTensor([token_ids]).to(self.device)
+            seq_len = torch.LongTensor([seq_len]).to(self.device)
+            mask = torch.LongTensor([mask]).to(self.device)
+            train_data = (token_ids, seq_len, mask)
+            return train_data
+
+        text = process_sentence(sentence)
         output = self.model(text)
         confidence = torch.nn.functional.softmax(output.data, dim=1)
         label_ids = torch.max(confidence, 1)[1].cpu().numpy()
