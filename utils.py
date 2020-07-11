@@ -7,7 +7,6 @@ import numpy as np
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 
-
 le = LabelEncoder()
 PAD, CLS = '[PAD]', '[CLS]'  # padding符号, bert中综合信息符号
 
@@ -32,14 +31,18 @@ def build_dataset(config, need_test):
         label = np.array(dataset['label'])
         label = le.fit_transform(label)
         label = label.reshape(-1, 1)
+        if len(set(label.flatten().tolist())) != config.num_classes:
+            print('the num of label in train set is', len(set(label.flatten().tolist())), 'but the num of class is',
+                  config.num_classes)
+            raise ValueError('train.txt的label数量与class.txt的class数量不匹配')
         dataset.pop('token')
         dataset.pop('label')
         dataset.pop('comments')
         feature_set = np.array(dataset)
-        train_size = 0.6 if need_test else 0.75
-        x_train, x_dev, y_train, y_dev = train_test_split(feature_set, label, test_size=train_size, stratify=label)
+        dev_size = 0.4 if need_test else 0.2
+        x_train, x_dev, y_train, y_dev = train_test_split(feature_set, label, test_size=dev_size, stratify=label)
         if need_test:
-            x_test, x_dev, y_test, y_dev = train_test_split(x_dev, y_dev, test_size=0.5, stratify=y_dev)
+            x_dev, x_test, y_dev, y_test = train_test_split(x_dev, y_dev, test_size=0.4, stratify=y_dev)
             raw_test = list(map(tuple, np.insert(x_test, 1, values=y_test.reshape(1, -1), axis=1)))
         else:
             raw_test = None
@@ -51,6 +54,7 @@ def build_dataset(config, need_test):
 
     train, dev, test = load_dataset(config.train_path, config.pad_size)
     return train, dev, test
+
 
 class DatasetIterater(object):
     def __init__(self, batches, batch_size, device):
