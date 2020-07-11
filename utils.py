@@ -16,20 +16,24 @@ def build_dataset(config, need_test):
         dataset = pd.read_csv(path, encoding='utf-8', names=['comments', 'label'], sep='\t', header=None)
         dataset['token'] = dataset['comments'].map(lambda x: config.tokenizer.tokenize(x))
         dataset['token'] = dataset['token'].map(lambda x: [CLS] + x)
+        # 将 comments 列进行 tokenize 并保存到 token 列
         dataset['token_ids'] = dataset['token'].map(lambda x: config.tokenizer.convert_tokens_to_ids(x))
+        # 将 token 列的 token 映射成数字 id 并保存到 token_ids 列
         dataset['seq_len'] = dataset['token'].map(lambda x: len(x))
         if pad_size:
             dataset['mask'] = dataset.apply(lambda x:
                                             [1] * len(x['token_ids']) + [0] * (pad_size - x['seq_len'])
                                             if x['seq_len'] < pad_size
                                             else [1] * pad_size, axis=1)
+            # 当 token 长度小于 pad 长度时，mask 为 token 长度个 1 剩下补 0，否则全 1
             dataset['token_ids'] = dataset.apply(lambda x:
                                                  x.token_ids + ([0] * (pad_size - x.seq_len))
                                                  if x['seq_len'] < pad_size
                                                  else x['token_ids'][:pad_size], axis=1)
+            # 当 token 长度小于 pad 长度时，对 token_ids 填 0 使其长度为 pad_size，否则截断。
             dataset['seq_len'] = dataset.apply(lambda x: min(x.seq_len, pad_size), axis=1)
         label = np.array(dataset['label'])
-        label = le.fit_transform(label)
+        label = le.fit_transform(label)  # 将字符串标签编码为数字
         label = label.reshape(-1, 1)
         if len(set(label.flatten().tolist())) != config.num_classes:
             print('the num of label in train set is', len(set(label.flatten().tolist())), 'but the num of class is',
@@ -50,7 +54,6 @@ def build_dataset(config, need_test):
         raw_dev = list(map(tuple, np.insert(x_dev, 1, values=y_dev.reshape(1, -1), axis=1)))
 
         return raw_train, raw_dev, raw_test
-        # return list(map(tuple, train)), list(map(tuple, dev))
 
     train, dev, test = load_dataset(config.train_path, config.pad_size)
     return train, dev, test

@@ -5,10 +5,10 @@ from importlib import import_module
 from sklearn.preprocessing import LabelEncoder
 from os import path
 
-
 le = LabelEncoder()
 
 PAD, CLS = '[PAD]', '[CLS]'  # padding符号, bert中综合信息符号
+
 
 class RequestHandler:
 
