@@ -62,5 +62,5 @@ class RequestHandler:
 
 if __name__ == '__main__':
     rh_sub = RequestHandler('bert')
-    result = rh_sub.get_result(u'哈工大食堂怎么样？')
+    result = rh_sub.get_result(u'河北专业分数线？')
     print(result)

@@ -35,10 +35,6 @@ def build_dataset(config, need_test):
         label = np.array(dataset['label'])
         label = le.fit_transform(label)  # 将字符串标签编码为数字
         label = label.reshape(-1, 1)
-        if len(set(label.flatten().tolist())) != config.num_classes:
-            print('the num of label in train set is', len(set(label.flatten().tolist())), 'but the num of class is',
-                  config.num_classes)
-            raise ValueError('train.txt的label数量与class.txt的class数量不匹配')
         dataset.pop('token')
         dataset.pop('label')
         dataset.pop('comments')
@@ -48,6 +44,10 @@ def build_dataset(config, need_test):
         if need_test:
             x_dev, x_test, y_dev, y_test = train_test_split(x_dev, y_dev, test_size=0.4, stratify=y_dev)
             raw_test = list(map(tuple, np.insert(x_test, 1, values=y_test.reshape(1, -1), axis=1)))
+            if len(set(y_test.flatten().tolist())) < config.num_classes:
+                print('the num of label in test set is', len(set(y_test.flatten().tolist())), 'but the num of label in train set is',
+                      config.num_classes)
+                raise ValueError('testset 的 label 数量与 trainset 的 label 数量不匹配')
         else:
             raw_test = None
         raw_train = list(map(tuple, np.insert(x_train, 1, values=y_train.reshape(1, -1), axis=1)))
