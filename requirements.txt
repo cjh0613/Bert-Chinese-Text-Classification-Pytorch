@@ -1,0 +1,6 @@
+regex
+requests
+boto3
+pandas
+tqdm
+sklearn
